@@ -1,0 +1,22 @@
+{
+  "name": "elecctro-back-end-challenge",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/otelom/Elecctro-Back-End-Challenge.git"
+  },
+  "author": "Otelo Magalhães",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/otelom/Elecctro-Back-End-Challenge/issues"
+  },
+  "homepage": "https://github.com/otelom/Elecctro-Back-End-Challenge#readme",
+  "dependencies": {
+    "hapi": "^17.2.3"
+  }
+}
