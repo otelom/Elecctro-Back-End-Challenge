@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "babel server -d lib",
-    "start": "node ./index.js"
+    "start": "node ./index.js",
+    "dev": "babel server -d lib && node ./index.js"
   },
   "repository": {
     "type": "git",
