@@ -1,17 +1,21 @@
 'use strict';
 
-const Hapi=require('hapi');
+import Hapi from 'hapi';
+import Boom from 'boom';
+import Catbox from 'catbox';
+import Memory from 'catbox-memory';
+
+
+/*const Hapi=require('hapi');
 const Boom=require('boom');
 const Catbox=require('catbox');
-const Memory=require('catbox-memory');
+const Memory=require('catbox-memory');*/
 
 //TODO JOI
 //TODO LOUT (partially implemented)
 //TODO CATBOX
 
 const client = new Catbox.Client(Memory);
-        await client.start();
-        expect(client.isReady()).to.equal(true);
 
 
 // Create a server with a host and port
@@ -68,11 +72,14 @@ server.route({
 server.route({
     method: 'PUT',
     path: '/todos',
-    handler: function (request, h) {
+    handler: async function (request, h) {
             
             const description = JSON.parse(request.payload).description;
             if(description){
                 // TODO ADD
+                await client.set(1, description, 50000);
+                const result = await client.get(description);
+                console.log(result);
                 const reply = `Requesting to add the following TODO: ${description}`
                 return h.response(reply).code(201);
             }
@@ -162,6 +169,7 @@ server.route({
 async function start() {
 
     try {
+        await client.start();
         await server.register([require('vision'), require('inert'), require('lout')]);
         server.start();
     }
