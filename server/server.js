@@ -4,19 +4,13 @@ import Hapi from 'hapi';
 import Boom from 'boom';
 import Catbox from 'catbox';
 import Memory from 'catbox-memory';
-
-
-/*const Hapi=require('hapi');
-const Boom=require('boom');
-const Catbox=require('catbox');
-const Memory=require('catbox-memory');*/
+import uuid from  'uuid/v4';
 
 //TODO JOI
 //TODO LOUT (partially implemented)
-//TODO CATBOX
 
 const client = new Catbox.Client(Memory);
-
+const key = { id: 'tasks', segment: 'default' };
 
 // Create a server with a host and port
 const server=Hapi.server({
@@ -77,9 +71,19 @@ server.route({
             const description = JSON.parse(request.payload).description;
             if(description){
                 // TODO ADD
-                await client.set(1, description, 50000);
-                const result = await client.get(description);
-                console.log(result);
+                let todo = {
+                    id: uuid(),
+                    description: description,
+                    completed: false,
+                    dateAdded: new Date().toISOString()
+                };
+                let dbList = (await client.get(key)).item;
+                console.log(dbList);
+                dbList = JSON.parse(dbList);
+                dbList.push(todo);
+                await client.set(key, JSON.stringify(dbList), 50000);
+                const result = await client.get(key);
+                console.log(result.item);
                 const reply = `Requesting to add the following TODO: ${description}`
                 return h.response(reply).code(201);
             }
@@ -148,7 +152,7 @@ server.route({
             // todos.get(request.params.id)
             const todo  = {
                 id: '123'
-            }
+            };
 
             if(todo.id === request.params.id){
                     // TODO DELETE
@@ -170,6 +174,8 @@ async function start() {
 
     try {
         await client.start();
+        let todos = [];
+        await client.set(key, JSON.stringify(todos), 50000);
         await server.register([require('vision'), require('inert'), require('lout')]);
         server.start();
     }
