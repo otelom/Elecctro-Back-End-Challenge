@@ -57,12 +57,23 @@ server.route({
             encodeURIComponent(request.query.orderBy) :
             'DATE_ADDED';
 
-        //RESELECT HERE
+        const orderBy = order === DESCRIPTION ? 'description' : 'dateAdded';
+
         let dbList = JSON.parse((await client.get(key)).item);
 
+        dbList.sort((a, b) => {
+            let descA = a[orderBy].toUpperCase(); // ignore upper and lowercase
+            console.log("## -> ",descA,"#");
+            let descB = b[orderBy].toUpperCase(); // ignore upper and lowercase
+            if (descA < descB)
+                return -1;
+            if (descA > descB)
+                return 1;
+            else
+                return 0;
+        });
 
-        const reply = `Requesting ${filter} TODOs and ordering them by ${order}!`;
-        return h.response(reply).code(200);
+        return h.response(dbList).code(200);
     },
     options: {
         validate: {
@@ -76,7 +87,7 @@ server.route({
         },
         description: 'Return TODOs',
         notes: 'The filter and order parameters defaults to \'ALL\' and \'DATE_ADDED\' respectively if unspecified',
-        tags: ['get', 'todos']
+        tags: ['get', 'todos', 'filter', 'order', 'orderBy']
     }
 });
 
@@ -198,8 +209,7 @@ server.route({
 
             const result = await client.get(key);
             console.log(result.item);
-            let reply = "Todo item has been deleted";
-            return h.response(reply).code(200);
+            return h.response().code(200);
         }
     },
     options: {
