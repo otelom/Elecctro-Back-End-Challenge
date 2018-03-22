@@ -91,8 +91,8 @@ server.route({
             // TODO ADD
             const todo = {
                 id: uuid(),
+                state: INCOMPLETE,
                 description: description,
-                completed: false,
                 dateAdded: new Date().toISOString()
             };
             let dbList = (await client.get(key)).item;
@@ -102,8 +102,7 @@ server.route({
             await client.set(key, JSON.stringify(dbList), 50000);
             const result = await client.get(key);
             console.log(result.item);
-            const reply = `Requesting to add the following TODO: ${description}`
-            return h.response(reply).code(201);
+            return h.response(todo).code(201);
         }
         else
             return Boom.badRequest('The expected request body should contain a single JSON object with a' +
@@ -128,9 +127,8 @@ server.route({
 //EDIT Route
 server.route({
     method: 'PATCH',
-    path: '/todos/{id}',
+    path: '/todos/{id?}',
     handler: async function (request, h) {
-        let reply;
         const description = request.payload.description;
         const state = request.payload.state;
 
@@ -139,41 +137,30 @@ server.route({
         const index = getIndex(dbList, request.params.id);
 
         // check if id exists
-        if (index === -1){
-            console.log(("index morreu"));
-            return Boom.notFound();}
+        if (index === -1)
+            return Boom.notFound();
+
         // check if the change is to the description
         if (description) {
-            console.log("index: ", index);
-            console.log("item: ", dbList[index]);
-            console.log("item.completed: ", dbList[index].completed);
             // check if task is not marked as completed
-            if (dbList[index].completed) {
-                reply = `TODO already marked as complete`;
-                return Boom.badRequest(reply);
+            if (dbList[index].state === COMPLETE) {
+                return Boom.badRequest(`TODO already marked as complete`);
             }
             // update the todo with the new description
             dbList[index].description = description;
-            reply = `Requesting to update TODO #${request.params.id} with the following description: "${description}"`;
         }
         // check if the change is to the state
         else if (state) {
             // update todo state
-            reply = `Requesting to change TODO #${request.params.id}\'s state to ${state}`;
-            dbList[index].completed = state;
+            dbList[index].state = state;
         }
-        // request body is not correct
-        else
-            return Boom.badRequest('The expected request body should contain a single JSON object with a combination' +
-                ' of the following fields: state and description. Both fields are optional, but at least one must' +
-                ' be present.');
 
         await client.set(key, JSON.stringify(dbList), 50000);
 
         const result = await client.get(key);
         console.log(result.item);
 
-        return h.response(reply).code(200);
+        return h.response(dbList[index]).code(200);
     },
 
     options: {
