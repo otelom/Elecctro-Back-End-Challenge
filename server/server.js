@@ -7,8 +7,6 @@ import Memory from 'catbox-memory';
 import uuid from 'uuid/v4';
 import Joi from 'joi';
 
-//TODO LOUT (partially implemented)
-
 const client = new Catbox.Client(Memory);
 const key = {id: 'tasks', segment: 'default'};
 
@@ -27,7 +25,7 @@ const server = Hapi.server({
 // IS-UP ROUTE
 server.route({
     method: 'GET',
-    path: '/test',
+    path: '/',
     handler: function (request, h) {
         // TODO TEST DB CONNECTION
         let dbOK = false;
