@@ -188,7 +188,7 @@ server.route({
     }
 });
 
-async function getIndex(dbList, id){
+function getIndex(dbList, id){
     return dbList.findIndex((todo) => todo.id === id);
 }
 
