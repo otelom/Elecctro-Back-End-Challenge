@@ -5,12 +5,18 @@ import Boom from 'boom';
 import Catbox from 'catbox';
 import Memory from 'catbox-memory';
 import uuid from 'uuid/v4';
+import Joi from 'joi';
 
-//TODO JOI
 //TODO LOUT (partially implemented)
 
 const client = new Catbox.Client(Memory);
 const key = {id: 'tasks', segment: 'default'};
+
+const ALL = 'ALL';
+const COMPLETE = 'COMPLETE';
+const INCOMPLETE = 'INCOMPLETE';
+const DESCRIPTION = 'DESCRIPTION';
+const DATE_ADDED = 'DATE_ADDED';
 
 // Create a server with a host and port
 const server = Hapi.server({
@@ -41,7 +47,7 @@ server.route({
 server.route({
     method: 'GET',
     path: '/todos',
-    handler: function (request, h) {
+    handler: async function (request, h) {
 
         const filter = request.query.filter ?
             encodeURIComponent(request.query.filter) :
@@ -51,11 +57,23 @@ server.route({
             encodeURIComponent(request.query.orderBy) :
             'DATE_ADDED';
 
-        // TODO GET
+        //RESELECT HERE
+        let dbList = JSON.parse((await client.get(key)).item);
 
-        return `Requesting ${filter} TODOs and ordering them by ${order}!`;
+
+        const reply = `Requesting ${filter} TODOs and ordering them by ${order}!`;
+        return h.response(reply).code(200);
     },
     options: {
+        validate: {
+            query: {
+                filter: Joi.string().valid(ALL, COMPLETE, INCOMPLETE).optional(),
+                orderBy: Joi.string().valid(DESCRIPTION, DATE_ADDED).optional()
+            },
+            failAction: (request, h, err) => {
+                return Boom.badRequest(err);
+            }
+        },
         description: 'Return TODOs',
         notes: 'The filter and order parameters defaults to \'ALL\' and \'DATE_ADDED\' respectively if unspecified',
         tags: ['get', 'todos']
@@ -68,7 +86,7 @@ server.route({
     path: '/todos',
     handler: async function (request, h) {
 
-        const description = JSON.parse(request.payload).description;
+        const description = request.payload.description;
         if (description) {
             // TODO ADD
             const todo = {
@@ -93,6 +111,14 @@ server.route({
 
     },
     options: {
+        validate: {
+            payload: {
+                description: Joi.string().trim().required()
+            },
+            failAction: (request, h, err) => {
+                return Boom.badRequest(err);
+            }
+        },
         description: 'Create/Add TODO',
         notes: 'The expected request body should contain a single JSON object with a description field.',
         tags: ['add', 'create', 'todo']
@@ -105,8 +131,8 @@ server.route({
     path: '/todos/{id}',
     handler: async function (request, h) {
         let reply;
-        const description = JSON.parse(request.payload).description;
-        const state = JSON.parse(request.payload).state;
+        const description = request.payload.description;
+        const state = request.payload.state;
 
         let dbList = JSON.parse((await client.get(key)).item);
         //const index = dbList.findIndex((todo) => todo.id === request.params.id);
@@ -149,7 +175,17 @@ server.route({
 
         return h.response(reply).code(200);
     },
+
     options: {
+        validate: {
+            payload: Joi.object().keys({
+                state: Joi.string().valid(COMPLETE, INCOMPLETE),
+                description: Joi.string()
+            }).xor('state', 'description'),
+            failAction: (request, h, err) => {
+                return Boom.badRequest(err);
+            }
+        },
         description: 'Edit/Update TODOs',
         notes: 'The expected request body should contain a single JSON object with a combination of the following fields: state and description. Both fields are optional, but at least one must be present.',
         tags: ['edit', 'update', 'patch', 'todos']
@@ -159,13 +195,11 @@ server.route({
 //DELETE Route
 server.route({
     method: 'DELETE',
-    path: '/todos/{id}',
+    path: '/todos/{id?}',
     handler: async function (request, h) {
-
         let dbList = JSON.parse((await client.get(key)).item);
         //const index = dbList.findIndex((todo) => todo.id === request.params.id);
         const index = getIndex(dbList, request.params.id);
-
         // check if id exists
         if (index === -1){
             return Boom.notFound();
@@ -182,6 +216,14 @@ server.route({
         }
     },
     options: {
+        validate: {
+            params: {
+                id: Joi.string().trim().required()
+            },
+            failAction: (request, h, err) => {
+                return Boom.badRequest(err);
+            }
+        },
         description: 'Delete TODO',
         notes: 'Deletes a TODO. The item will be referenced by id using the URL parameter id',
         tags: ['delete', 'todo']
