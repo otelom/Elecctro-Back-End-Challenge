@@ -107,8 +107,10 @@ server.route({
         let reply;
         const description = JSON.parse(request.payload).description;
         const state = JSON.parse(request.payload).state;
+
         let dbList = JSON.parse((await client.get(key)).item);
-        const index = dbList.findIndex((todo) => todo.id === request.params.id);
+        //const index = dbList.findIndex((todo) => todo.id === request.params.id);
+        const index = getIndex(dbList, request.params.id);
 
         // check if id exists
         if (index === -1){
@@ -158,22 +160,26 @@ server.route({
 server.route({
     method: 'DELETE',
     path: '/todos/{id}',
-    handler: function (request, h) {
+    handler: async function (request, h) {
 
+        let dbList = JSON.parse((await client.get(key)).item);
+        //const index = dbList.findIndex((todo) => todo.id === request.params.id);
+        const index = getIndex(dbList, request.params.id);
 
-        //this will be the task that exists on server
-        // todos.get(request.params.id)
-        const todo = {
-            id: '123'
-        };
-
-        if (todo.id === request.params.id) {
-            // TODO DELETE
-            return h.response().code(200);
-        }
-        else
+        // check if id exists
+        if (index === -1){
             return Boom.notFound();
+        }
+        // removes de requested item
+        else{
+            dbList.splice(index,1);
+            await client.set(key, JSON.stringify(dbList), 50000);
 
+            const result = await client.get(key);
+            console.log(result.item);
+            let reply = "Todo item has been deleted";
+            return h.response(reply).code(200);
+        }
     },
     options: {
         description: 'Delete TODO',
@@ -181,6 +187,10 @@ server.route({
         tags: ['delete', 'todo']
     }
 });
+
+async function getIndex(dbList, id){
+    return dbList.findIndex((todo) => todo.id === id);
+}
 
 // Start the server
 async function start() {
