@@ -60,9 +60,13 @@ server.route({
 
         let dbList = JSON.parse((await client.get(key)).item);
 
+        // applying filter
+        if(filter !== ALL) {
+            dbList = dbList.filter(todo => todo.state === filter);
+        }
+        // applying orderBy
         dbList.sort((a, b) => {
             let descA = a[orderBy].toUpperCase(); // ignore upper and lowercase
-            console.log("## -> ",descA,"#");
             let descB = b[orderBy].toUpperCase(); // ignore upper and lowercase
             if (descA < descB)
                 return -1;
@@ -98,7 +102,6 @@ server.route({
 
         const description = request.payload.description;
         if (description) {
-            // TODO ADD
             const todo = {
                 id: uuid(),
                 state: INCOMPLETE,
@@ -112,6 +115,7 @@ server.route({
             await client.set(key, JSON.stringify(dbList), 50000);
             const result = await client.get(key);
             console.log(result.item);
+
             return h.response(todo).code(201);
         }
         else
