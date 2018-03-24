@@ -16,6 +16,7 @@ The full description of the project can be found in the [Server Challenge.pdf](h
 * [Catbox](https://github.com/hapijs/catbox)
 * [Catbox-memory](https://github.com/hapijs/catbox-memory)
 * [Joi](https://github.com/hapijs/joi)
+* [Babel](https://babeljs.io/)
 
 
 ## Author
