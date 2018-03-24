@@ -239,7 +239,12 @@ async function start() {
 
     try {
         await client.start();
-        let todos = [];
+        let todos = [{
+            id: uuid(),
+            state: INCOMPLETE,
+            description: 'Task Example',
+            dateAdded: new Date().toISOString()
+        }];
         await client.set(key, JSON.stringify(todos), 50000);
         await server.register([require('vision'), require('inert'), require('lout')]);
         server.start();
