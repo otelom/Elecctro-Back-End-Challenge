@@ -9,7 +9,7 @@ import Joi from 'joi';
 
 const client = new Catbox.Client(Memory);
 const key = {id: 'tasks', segment: 'default'};
-
+const TTL = 2592000000;
 const ALL = 'ALL';
 const COMPLETE = 'COMPLETE';
 const INCOMPLETE = 'INCOMPLETE';
@@ -47,7 +47,7 @@ server.route({
     method: 'GET',
     path: '/todos',
     handler: async function (request, h) {
-
+        console.log("#### GET REQUEST ###");
         const filter = request.query.filter ?
             encodeURIComponent(request.query.filter) :
             'ALL';
@@ -57,8 +57,8 @@ server.route({
             'DATE_ADDED';
 
         const orderBy = order === DESCRIPTION ? 'description' : 'dateAdded';
-
-        let dbList = JSON.parse((await client.get(key)).item);
+        console.log("request get query: ",request.query);
+        let dbList = await getDB();
 
         // applying filter
         if(filter !== ALL) {
@@ -99,7 +99,7 @@ server.route({
     method: 'PUT',
     path: '/todos',
     handler: async function (request, h) {
-
+        console.log("#### PUT REQUEST ###");
         const description = request.payload.description;
         if (description) {
             const todo = {
@@ -108,13 +108,10 @@ server.route({
                 description: description,
                 dateAdded: new Date().toISOString()
             };
-            let dbList = (await client.get(key)).item;
-            console.log(dbList);
-            dbList = JSON.parse(dbList);
+            let dbList = await getDB();
             dbList.push(todo);
-            await client.set(key, JSON.stringify(dbList), 50000);
-            const result = await client.get(key);
-            console.log(result.item);
+            await client.set(key, JSON.stringify(dbList), TTL);
+            console.log(dbList);
 
             return h.response(todo).code(201);
         }
@@ -143,10 +140,13 @@ server.route({
     method: 'PATCH',
     path: '/todos/{id?}',
     handler: async function (request, h) {
+        console.log("#### PATCH REQUEST ###");
+        console.log("id: ", request.params.id);
+        console.log("body: ", request.payload);
         const description = request.payload.description;
         const state = request.payload.state;
 
-        let dbList = JSON.parse((await client.get(key)).item);
+        let dbList = await getDB();
         //const index = dbList.findIndex((todo) => todo.id === request.params.id);
         const index = getIndex(dbList, request.params.id);
 
@@ -169,10 +169,9 @@ server.route({
             dbList[index].state = state;
         }
 
-        await client.set(key, JSON.stringify(dbList), 50000);
+        await client.set(key, JSON.stringify(dbList), TTL);
 
-        const result = await client.get(key);
-        console.log(result.item);
+        console.log(dbList);
 
         return h.response(dbList[index]).code(200);
     },
@@ -198,7 +197,9 @@ server.route({
     method: 'DELETE',
     path: '/todos/{id?}',
     handler: async function (request, h) {
-        let dbList = JSON.parse((await client.get(key)).item);
+        console.log("#### DELETE REQUEST ###");
+        console.log("requesting to delete id: ",request.params.id);
+        let dbList = await getDB();
         //const index = dbList.findIndex((todo) => todo.id === request.params.id);
         const index = getIndex(dbList, request.params.id);
         // check if id exists
@@ -208,10 +209,10 @@ server.route({
         // removes de requested item
         else{
             dbList.splice(index,1);
-            await client.set(key, JSON.stringify(dbList), 50000);
+            await client.set(key, JSON.stringify(dbList), TTL);
 
-            const result = await client.get(key);
-            console.log(result.item);
+
+            console.log(dbList);
             return h.response().code(200);
         }
     },
@@ -234,6 +235,21 @@ function getIndex(dbList, id){
     return dbList.findIndex((todo) => todo.id === id);
 }
 
+async function getDB(){
+    try{
+        return JSON.parse((await client.get(key)).item);
+    }catch (err){
+        let todos = [{
+            id: uuid(),
+            state: INCOMPLETE,
+            description: 'Task Example',
+            dateAdded: new Date().toISOString()
+        }];
+        await client.set(key, JSON.stringify(todos), TTL);
+        return todos;
+    }
+}
+
 // Start the server
 async function start() {
 
@@ -245,7 +261,7 @@ async function start() {
             description: 'Task Example',
             dateAdded: new Date().toISOString()
         }];
-        await client.set(key, JSON.stringify(todos), 50000);
+        await client.set(key, JSON.stringify(todos), TTL);
         await server.register([require('vision'), require('inert'), require('lout')]);
         server.start();
     }
